@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Quote Garden</title>
+  <meta name="description" content="Single-file quotes notebook with categories, search, sourcing, and on-page editing with export." />
+  <style>
+    :root{
+      --bg:#ffffff;
+      --text:#0e1520;
+      --muted:#566070;
+      --panel:#f6f8fb;
+      --border:#e6ebf2;
+      --accent:#1f4fff;
+      --card:#ffffff;
+      --radius:16px;
+      --warn:#b84a00;
+      --ok:#0a7b34;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0; background:var(--bg); color:var(--text); font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji"}
+    a{color:var(--accent); text-decoration:none}
+    a:hover{text-decoration:underline}
+    .wrap{display:grid; grid-template-columns:320px 1fr; gap:20px; max-width:1280px; margin:0 auto; padding:24px}
+    header{grid-column:1/-1; display:flex; gap:12px; align-items:center; flex-wrap:wrap}
+    .title{font-weight:800; letter-spacing:.2px; font-size:24px}
+    .spacer{flex:1 1 auto}
+    .search{display:flex; gap:8px; align-items:center}
+    .search input{flex:1; min-width:260px; background:var(--panel); border:1px solid var(--border); color:var(--text); padding:12px 14px; border-radius:12px}
+    .pill{display:inline-flex; align-items:center; gap:8px; padding:10px 12px; background:var(--panel); border:1px solid var(--border); border-radius:12px; color:var(--muted)}
+    .sidebar{position:sticky; top:16px; align-self:start; background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:16px}
+    .sidebar h3{margin:6px 0 10px; font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:.12em}
+    .sidebar .group{display:grid; gap:8px}
+    select, .btn, input[type=text], input[type=url], input[type=date], textarea{
+      width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--border); background:#fff; color:var(--text);
+    }
+    textarea{min-height:120px; resize:vertical}
+    .row{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+    .btn{cursor:pointer; background:#fff}
+    .btn.inline{width:auto}
+    .btn.warn{border-color:#ffd8bf; background:#fff7f0; color:#7b3700}
+    .btn.ok{border-color:#bfe8ce; background:#f0fff5; color:#0a6630}
+    .tools{display:grid; gap:8px; grid-template-columns:1fr}
+    .toggle{display:flex; gap:8px; align-items:center}
+    .toggle input{width:18px; height:18px}
+    .content{display:grid; grid-template-columns:repeat(1,minmax(0,1fr)); gap:14px}
+    @media (min-width: 940px){ .content{grid-template-columns:repeat(2,minmax(0,1fr));} }
+    .card{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:18px; display:flex; flex-direction:column; gap:12px; box-shadow:0 2px 10px rgba(10,20,30,.04)}
+    .q{font-family: Georgia, Cambria, 'Times New Roman', Times, serif; font-size:19px}
+    .meta{display:flex; flex-wrap:wrap; gap:8px; color:var(--muted)}
+    .sourcing{display:flex; flex-wrap:wrap; gap:6px; color:var(--muted)}
+    .label{font-weight:600; color:#445160}
+    .badges{display:flex; gap:8px; flex-wrap:wrap; margin-top:2px}
+    .badge{padding:4px 8px; border-radius:999px; background:#eef2ff; border:1px solid #d9e0ff; font-size:12px; color:#2740aa}
+    .badge.tag{background:#f1f5f9; border-color:#e3e9f0; color:#485565}
+    .toolbar{display:flex; gap:8px; flex-wrap:wrap}
+    .card .editbar{display:none; gap:8px}
+    .editor-on .card .editbar{display:flex}
+    .footer{grid-column:1/-1; color:var(--muted); text-align:center; padding:16px}
+    .hr{height:1px; background:var(--border); margin:12px 0}
+    .empty{opacity:.7; text-align:center; padding:24px}
+    .status{font-size:12px; color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="title">Quote Garden</div>
+      <div class="spacer"></div>
+      <div class="pill" id="count">0 quotes</div>
+      <div class="search">
+        <input id="searchInput" type="search" placeholder="Search text, author, source, tags (⌘/Ctrl+K)" aria-label="Search" />
+      </div>
+    </header>
+
+    <aside class="sidebar" aria-label="Filters, editor, tools">
+      <div class="group">
+        <h3>Category</h3>
+        <select id="categorySelect" aria-label="Select category">
+          <option value="">All</option>
+        </select>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="group">
+        <h3>Editor</h3>
+        <label class="toggle"><input type="checkbox" id="editorToggle" /> Enable editor mode</label>
+        <div id="editorPanel" style="display:none">
+          <div class="status" id="persistStatus">Local changes: none</div>
+          <div class="hr"></div>
+          <label>Quote text</label>
+          <textarea id="f_text" placeholder="Exact quote..."></textarea>
+          <div class="row">
+            <div>
+              <label>Author</label>
+              <input id="f_author" type="text" placeholder="e.g., William Shakespeare" />
+            </div>
+            <div>
+              <label>Date (YYYY-MM-DD)</label>
+              <input id="f_date" type="date" />
+            </div>
+          </div>
+          <label>Sourcing (work / act / chapter)</label>
+          <input id="f_source" type="text" placeholder="Hamlet, Act II, Scene ii" />
+          <label>Source URL</label>
+          <input id="f_url" type="url" placeholder="https://..." />
+          <div class="row">
+            <div>
+              <label>Categories (comma-separated)</label>
+              <input id="f_categories" type="text" placeholder="warfare, poetry" />
+            </div>
+            <div>
+              <label>Tags (comma-separated)</label>
+              <input id="f_tags" type="text" placeholder="honor, athens" />
+            </div>
+          </div>
+          <label>ID (auto if blank)</label>
+          <input id="f_id" type="text" placeholder="author-key-words" />
+
+          <div class="toolbar" style="margin-top:8px">
+            <button class="btn ok" id="btnAdd">Add / Update Quote</button>
+            <button class="btn warn" id="btnDelete">Delete Selected</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="group">
+        <h3>Tools</h3>
+        <div class="tools">
+          <button class="btn" id="clearFilters">Clear filters</button>
+          <button class="btn" id="copyLink">Copy shareable link</button>
+          <button class="btn" id="exportJson">Export JSON</button>
+          <button class="btn" id="downloadHtml">Download updated index.html</button>
+          <button class="btn warn" id="resetLocal">Discard local changes</button>
+        </div>
+        <p style="color:var(--muted); margin-top:8px">Edits save to <strong>your browser</strong> until you download & commit the HTML.</p>
+      </div>
+    </aside>
+
+    <main class="content" id="cards" aria-live="polite"></main>
+
+    <div class="footer">Static and durable. Changes are local until you download & commit.</div>
+  </div>
+
+  <!-- Data store: edit this JSON to add or change quotes. -->
+  <script id="data" type="application/json">{
+    "quotes": [
+      {
+        "id": "thucydides-freedom-courage",
+        "text": "The secret of happiness is freedom, and the secret of freedom is courage.",
+        "author": "Thucydides",
+        "source": "History of the Peloponnesian War (2.40)",
+        "url": "https://www.perseus.tufts.edu/hopper/text?doc=Thuc.%202.40",
+        "date": "-0429-01-01",
+        "categories": ["warfare", "human nature"],
+        "tags": ["Athens", "Pericles"]
+      },
+      {
+        "id": "hobbes-bellum-omnium",
+        "text": "During the time men live without a common Power to keep them all in awe, they are in that condition which is called War; and such a war, as is of every man, against every man.",
+        "author": "Thomas Hobbes",
+        "source": "Leviathan (ch. 13)",
+        "url": "https://www.gutenberg.org/ebooks/3207",
+        "date": "1651-01-01",
+        "categories": ["human nature", "politics"],
+        "tags": ["state of nature", "conflict"]
+      },
+      {
+        "id": "shakespeare-love",
+        "text": "Love looks not with the eyes, but with the mind, and therefore is winged Cupid painted blind.",
+        "author": "William Shakespeare",
+        "source": "A Midsummer Night's Dream",
+        "url": "https://shakespeare.folger.edu/",
+        "date": "1595-01-01",
+        "categories": ["love", "poetry"],
+        "tags": ["Cupid"]
+      },
+      {
+        "id": "owen-dulce",
+        "text": "My friend, you would not tell with such high zest to children ardent for some desperate glory, the old Lie; Dulce et decorum est pro patria mori.",
+        "author": "Wilfred Owen",
+        "source": "Dulce et Decorum Est",
+        "url": "https://www.poetryfoundation.org/poems/46560/dulce-et-decorum-est",
+        "date": "1917-01-01",
+        "categories": ["warfare", "poetry"],
+        "tags": ["World War I"]
+      },
+      {
+        "id": "matthew-thesis",
+        "text": "Certainty breeds coercion; pluralism preserves liberty.",
+        "author": "Matthew Sivieri",
+        "source": "Personal notes",
+        "url": "",
+        "date": "2025-08-12",
+        "categories": ["politics", "maxims"],
+        "tags": ["pluralism", "liberty"]
+      }
+    ]
+  </script>
+
+  <script>
+    const $ = sel => document.querySelector(sel);
+    const params = new URLSearchParams(location.search);
+    const LOCAL_KEY = 'quoteGardenQuotesV1';
+
+    // Load base quotes from file
+    const baseData = JSON.parse($('#data').textContent);
+    let quotes = baseData.quotes;
+
+    // If local changes exist, prefer those
+    const local = localStorage.getItem(LOCAL_KEY);
+    if(local){
+      try {
+        const parsed = JSON.parse(local);
+        if(Array.isArray(parsed)) quotes = parsed;
+        $('#persistStatus').textContent = 'Local changes: loaded';
+      } catch {}
+    }
+
+    const state = { q: params.get('q') || '', cat: params.get('cat') || '', editor: false, selectedId: null };
+
+    const searchInput = $('#searchInput');
+    const categorySelect = $('#categorySelect');
+    const cards = $('#cards');
+    const count = $('#count');
+    const editorToggle = $('#editorToggle');
+    const editorPanel = $('#editorPanel');
+
+    // Build category options
+    function renderCatOptions(){
+      const existing = new Set();
+      quotes.forEach(q => (q.categories||[]).forEach(c => existing.add(c)));
+      const allCats = Array.from(existing).sort((a,b)=>a.localeCompare(b));
+      categorySelect.innerHTML = '<option value=\"\">All</option>' + allCats.map(c=>`<option value=\"${escapeAttr(c)}\">${escapeHtml(c)}</option>`).join('');
+      categorySelect.value = state.cat;
+    }
+
+    function escapeHtml(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c])); }
+    function escapeAttr(s){ return String(s).replace(/\"/g,'&quot;'); }
+
+    function matches(q){
+      const inCat = !state.cat || (q.categories || []).includes(state.cat);
+      if(!inCat) return false;
+      const needle = state.q.trim().toLowerCase();
+      if(!needle) return true;
+      const hay = [q.text, q.author, q.source, ...(q.tags||[]), ...(q.categories||[])].join(' ').toLowerCase();
+      return hay.includes(needle);
+    }
+
+    function cardHtml(q){
+      const cats = (q.categories||[]).map(c=>`<span class=\"badge\">${escapeHtml(c)}</span>`).join('');
+      const tags = (q.tags||[]).map(t=>`<span class=\"badge tag\">#${escapeHtml(t)}</span>`).join('');
+      const link = q.url ? ` · <a href=\"${escapeAttr(q.url)}\" target=\"_blank\" rel=\"noopener\">source</a>` : '';
+      return `
+      <article class=\"card\" id=\"${escapeAttr(q.id)}\">
+        <div class=\"q\">“${escapeHtml(q.text)}”</div>
+        <div class=\"meta\">— <strong>${escapeHtml(q.author)}</strong></div>
+        <div class=\"sourcing\"><span class=\"label\">Sourcing:</span> <span>${escapeHtml(q.source||'')}</span>${link}</div>
+        <div class=\"badges\">${cats} ${tags}</div>
+        <div class=\"editbar\">
+          <button class=\"btn inline\" data-edit=\"${escapeAttr(q.id)}\">Edit</button>
+          <button class=\"btn inline warn\" data-del=\"${escapeAttr(q.id)}\">Delete</button>
+        </div>
+      </article>`;
+    }
+
+    function renderCards(list){
+      if(list.length===0){ cards.innerHTML = `<div class=\"empty\">No results. Try another category or clear filters.</div>`; return; }
+      cards.innerHTML = list.map(cardHtml).join('');
+      // Wire edit/delete buttons if editor is on
+      if(state.editor){
+        cards.querySelectorAll('button[data-edit]').forEach(b => b.onclick = () => editQuote(b.getAttribute('data-edit')));
+        cards.querySelectorAll('button[data-del]').forEach(b => b.onclick = () => deleteQuote(b.getAttribute('data-del')));
+      }
+    }
+
+    function updateUrl(){
+      const p = new URLSearchParams();
+      if(state.q) p.set('q', state.q);
+      if(state.cat) p.set('cat', state.cat);
+      const url = location.pathname + (p.toString()?`?${p}`:'');
+      history.replaceState(null, '', url);
+    }
+
+    function update(){
+      document.body.classList.toggle('editor-on', state.editor);
+      renderCatOptions();
+      const filtered = quotes.filter(matches).sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
+      renderCards(filtered);
+      count.textContent = `${filtered.length} ${filtered.length===1?'quote':'quotes'}`;
+      updateUrl();
+    }
+
+    // Editor helpers
+    function slugify(s){ return String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,''); }
+    function autoId(q){
+      if(q.id && q.id.trim()) return slugify(q.id);
+      const auth = slugify(q.author || 'anon');
+      const words = slugify(q.text || '').split('-').slice(0,4).join('-');
+      return (auth + '-' + words).replace(/(^-|-$)/g,'');
+    }
+    function currentFormQuote(){
+      const cats = $('#f_categories').value.split(',').map(s=>s.trim()).filter(Boolean);
+      const tags = $('#f_tags').value.split(',').map(s=>s.trim()).filter(Boolean);
+      const q = {
+        id: $('#f_id').value.trim(),
+        text: $('#f_text').value.trim(),
+        author: $('#f_author').value.trim(),
+        source: $('#f_source').value.trim(),
+        url: $('#f_url').value.trim(),
+        date: $('#f_date').value || '',
+        categories: cats,
+        tags: tags
+      };
+      q.id = autoId(q);
+      return q;
+    }
+    function loadForm(q){
+      $('#f_id').value = q.id || '';
+      $('#f_text').value = q.text || '';
+      $('#f_author').value = q.author || '';
+      $('#f_source').value = q.source || '';
+      $('#f_url').value = q.url || '';
+      $('#f_date').value = (q.date && /^\d{4}-\d{2}-\d{2}$/.test(q.date)) ? q.date : '';
+      $('#f_categories').value = (q.categories||[]).join(', ');
+      $('#f_tags').value = (q.tags||[]).join(', ');
+    }
+    function persistLocal(){
+      localStorage.setItem(LOCAL_KEY, JSON.stringify(quotes));
+      $('#persistStatus').textContent = 'Local changes: saved';
+    }
+
+    function editQuote(id){
+      const q = quotes.find(x=>x.id===id);
+      if(!q) return;
+      state.selectedId = id;
+      loadForm(q);
+      editorToggle.checked = true; state.editor = true; editorPanel.style.display='block';
+      $('#f_text').focus();
+    }
+
+    function deleteQuote(id){
+      const i = quotes.findIndex(x=>x.id===id);
+      if(i===-1) return;
+      if(!confirm('Delete this quote?')) return;
+      quotes.splice(i,1);
+      persistLocal();
+      update();
+    }
+
+    function upsertQuote(){
+      const q = currentFormQuote();
+      if(!q.text || !q.author){ alert('Text and Author are required.'); return; }
+      const i = quotes.findIndex(x=>x.id===q.id);
+      if(i>-1){ quotes[i] = q; } else { quotes.push(q); }
+      persistLocal();
+      update();
+      // Clear selection but keep form content
+      state.selectedId = q.id;
+      alert('Saved locally. Download HTML to make it live.');
+    }
+
+    function downloadUpdatedHtml(){
+      // Clone document and replace JSON block
+      const doc = document.documentElement.cloneNode(true);
+      const script = doc.querySelector('#data');
+      script.textContent = JSON.stringify({quotes}, null, 2);
+      // Remove editor local status text (optional keep)
+      const serializer = new XMLSerializer();
+      const doctype = '<!doctype html>\n';
+      const html = doctype + serializer.serializeToString(doc);
+      const blob = new Blob([html], {type:'text/html'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'index.html';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    // Wire controls
+    searchInput.value = state.q;
+    searchInput.addEventListener('input', e=>{ state.q = e.target.value; update(); });
+    categorySelect.addEventListener('change', e=>{ state.cat = e.target.value; update(); });
+    $('#clearFilters').onclick = ()=>{ state.q=''; state.cat=''; searchInput.value=''; categorySelect.value=''; update(); };
+    $('#copyLink').onclick = async ()=>{
+      try { await navigator.clipboard.writeText(location.href); alert('Link copied'); } catch { alert('Copy failed'); }
+    };
+    $('#exportJson').onclick = ()=>{
+      const blob = new Blob([JSON.stringify({quotes}, null, 2)], {type:'application/json'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'quotes.json'; a.click(); URL.revokeObjectURL(a.href);
+    };
+    $('#downloadHtml').onclick = downloadUpdatedHtml;
+    $('#resetLocal').onclick = ()=>{ if(confirm('Discard local changes and revert to file version?')){ localStorage.removeItem(LOCAL_KEY); location.reload(); } };
+
+    editorToggle.addEventListener('change', e=>{
+      state.editor = !!e.target.checked;
+      editorPanel.style.display = state.editor ? 'block' : 'none';
+      update();
+    });
+    $('#btnAdd').onclick = upsertQuote;
+    $('#btnDelete').onclick = ()=>{ if(state.selectedId) deleteQuote(state.selectedId); else alert('Select a quote to delete (click Edit on a card first).'); };
+
+    // Keyboard quick search
+    window.addEventListener('keydown', (e)=>{ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){ e.preventDefault(); searchInput.focus(); } });
+
+    // Init
+    function init(){
+      renderCatOptions();
+      update();
+    }
+    init();
+  </script>
+</body>
+</html>
