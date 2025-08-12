@@ -4,16 +4,6 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Quote Garden</title>
-  <!--
-  HOW TO USE THIS SINGLE-FILE SITE
-  --------------------------------
-  • This is a 100% static page. Host it anywhere (GitHub Pages, Netlify, a USB stick). No build tools.
-  • All quotes live in the JSON block near the bottom: <script id="data" type="application/json">…</script>
-  • To add a quote, paste another object into the array. Keep fields: id, text, author, source, url, date, categories [array of strings], tags [array].
-  • Deep links: you can share filtered views, e.g. ?cat=warfare or ?q=freedom . Multiple cats allowed: ?cat=warfare,politics
-  • Nothing you add in the browser is saved to the server. Edit the file and commit to your repo for permanent changes.
-  • Optional: use GitHub Issues + a small script to export to JSON, or wire this into a static generator later.
-  -->
   <style>
     :root {
       --bg: #0b0d10;
@@ -26,20 +16,18 @@
       --radius: 16px;
     }
     *{box-sizing:border-box}
-    html,body{height:100%}
     body{
-      margin:0; background:var(--bg); color:var(--text); font:16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      margin:0; background:var(--bg); color:var(--text); font:16px/1.55 system-ui, sans-serif;
     }
     a{color:var(--accent); text-decoration:none}
     a:hover{text-decoration:underline}
     .wrap{display:grid; grid-template-columns:280px 1fr; gap:20px; max-width:1200px; margin:0 auto; padding:24px}
     header{grid-column:1/-1; display:flex; gap:12px; align-items:center; justify-content:space-between}
-    .title{font-size:22px; font-weight:700; letter-spacing:.2px}
+    .title{font-size:22px; font-weight:700;}
     .search{flex:1; display:flex; gap:8px; align-items:center; margin-left:14px}
     .search input{flex:1; background:var(--panel); border:1px solid var(--border); color:var(--text); padding:12px 14px; border-radius:12px}
-    .pill{display:inline-flex; align-items:center; gap:8px; padding:10px 12px; background:var(--panel); border:1px solid var(--border); border-radius:12px; color:var(--muted)}
+    .pill{padding:10px 12px; background:var(--panel); border:1px solid var(--border); border-radius:12px; color:var(--muted)}
     .sidebar{position:sticky; top:16px; align-self:start; background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:16px}
-    .sidebar h3{margin:6px 0 10px; font-size:14px; color:var(--muted); text-transform:uppercase; letter-spacing:.12em}
     .catlist{display:flex; flex-wrap:wrap; gap:8px}
     .cat{border:1px solid var(--border); background:transparent; color:var(--text); padding:6px 10px; border-radius:999px; cursor:pointer}
     .cat.active{background:var(--accent); color:#0b1220; border-color:transparent}
@@ -52,8 +40,6 @@
     .badge{padding:4px 8px; border-radius:999px; background:#0e1823; border:1px solid var(--border); font-size:12px; color:var(--muted)}
     .toolbar{display:flex; gap:10px; flex-wrap:wrap}
     .btn{padding:8px 10px; border-radius:10px; border:1px solid var(--border); background:var(--panel); color:var(--text); cursor:pointer}
-    .btn:hover{border-color:#334356}
-    .muted{color:var(--muted)}
     .footer{grid-column:1/-1; color:var(--muted); text-align:center; padding:20px}
     .hr{height:1px; background:var(--border); margin:12px 0}
     .empty{opacity:.7; text-align:center; padding:24px}
@@ -64,95 +50,93 @@
     <header>
       <div class="title">Quote Garden</div>
       <div class="search">
-        <input id="searchInput" type="search" placeholder="Search text, author, tags… (⌘/Ctrl+K)" aria-label="Search" />
-        <button class="pill" id="clearFilters" title="Clear filters">Clear</button>
+        <input id="searchInput" type="search" placeholder="Search..." />
+        <button class="pill" id="clearFilters">Clear</button>
       </div>
       <div class="pill" id="count">0 quotes</div>
     </header>
 
-    <aside class="sidebar" aria-label="Categories and tools">
+    <aside class="sidebar">
       <h3>Categories</h3>
       <div class="catlist" id="catList"></div>
       <div class="hr"></div>
       <h3>Tools</h3>
       <div class="toolbar">
-        <button class="btn" id="copyLink">Copy shareable link</button>
+        <button class="btn" id="copyLink">Copy link</button>
         <button class="btn" id="exportJson">Export JSON</button>
       </div>
-      <p class="muted" style="margin-top:8px">Tip: Add quotes by editing this file’s JSON block and pushing to your repo.</p>
     </aside>
 
-    <main class="content" id="cards" aria-live="polite"></main>
+    <main class="content" id="cards"></main>
 
-    <div class="footer muted">Static, durable, and yours. Host anywhere.</div>
+    <div class="footer">Static, durable, and yours.</div>
   </div>
 
-  <!-- Data store: edit this JSON to add or change quotes. -->
   <script id="data" type="application/json">{
     "quotes": [
       {
         "id": "thucydides-freedom-courage",
         "text": "The secret of happiness is freedom, and the secret of freedom is courage.",
         "author": "Thucydides",
-        "source": "History of the Peloponnesian War (2.40)",
+        "source": "History of the Peloponnesian War",
         "url": "https://www.perseus.tufts.edu/hopper/text?doc=Thuc.%202.40",
         "date": "-0429-01-01",
         "categories": ["warfare", "human nature"],
         "tags": ["Athens", "Pericles"]
       },
       {
-        "id": "hobbes-bellum-omnium",
+        "id": "hobbes-war-all",
         "text": "During the time men live without a common Power to keep them all in awe, they are in that condition which is called War; and such a war, as is of every man, against every man.",
         "author": "Thomas Hobbes",
-        "source": "Leviathan (ch. 13)",
+        "source": "Leviathan",
         "url": "https://www.gutenberg.org/ebooks/3207",
         "date": "1651-01-01",
-        "categories": ["human nature", "politics"],
+        "categories": ["politics", "human nature"],
         "tags": ["state of nature", "conflict"]
       },
       {
-        "id": "oseille-pluralism",
+        "id": "shakespeare-love",
+        "text": "Love looks not with the eyes, but with the mind, and therefore is winged Cupid painted blind.",
+        "author": "William Shakespeare",
+        "source": "A Midsummer Night's Dream",
+        "url": "https://shakespeare.folger.edu/",
+        "date": "1595-01-01",
+        "categories": ["love", "poetry"],
+        "tags": ["Cupid"]
+      },
+      {
+        "id": "owen-war",
+        "text": "My friend, you would not tell with such high zest to children ardent for some desperate glory, the old Lie; Dulce et decorum est pro patria mori.",
+        "author": "Wilfred Owen",
+        "source": "Dulce et Decorum Est",
+        "url": "https://www.poetryfoundation.org/poems/46560/dulce-et-decorum-est",
+        "date": "1917-01-01",
+        "categories": ["warfare", "poetry"],
+        "tags": ["World War I"]
+      },
+      {
+        "id": "matthew-thesis",
         "text": "Certainty breeds coercion; pluralism preserves liberty.",
-        "author": "Matthew (Thesis)",
+        "author": "Matthew Sivieri",
         "source": "Personal notes",
         "url": "",
         "date": "2025-08-12",
         "categories": ["politics", "maxims"],
         "tags": ["pluralism", "liberty"]
-      },
-      {
-        "id": "dahl-democracy",
-        "text": "Democracy is a continuing experiment to find out how we can govern ourselves justly and effectively.",
-        "author": "Robert A. Dahl",
-        "source": "On Democracy",
-        "url": "https://archive.org/details/ondemocracy",
-        "date": "1998-01-01",
-        "categories": ["politics"],
-        "tags": ["democracy"]
       }
     ]
   }</script>
 
   <script>
-    const $ = sel => document.querySelector(sel);
-    const $$ = sel => Array.from(document.querySelectorAll(sel));
-
-    const state = {
-      q: new URLSearchParams(location.search).get('q') || '',
-      cats: (new URLSearchParams(location.search).get('cat') || '').split(',').filter(Boolean)
-    };
-
-    const data = JSON.parse(document.getElementById('data').textContent);
-    const quotes = data.quotes;
-
+    const state = { q: '', cats: [] };
+    const quotes = JSON.parse(document.getElementById('data').textContent).quotes;
     const searchInput = document.getElementById('searchInput');
     const catList = document.getElementById('catList');
     const cards = document.getElementById('cards');
     const count = document.getElementById('count');
 
-    // Build category pills
-    const allCats = Array.from(new Set(quotes.flatMap(q => q.categories))).sort((a,b)=>a.localeCompare(b));
     function renderCats(){
+      const allCats = Array.from(new Set(quotes.flatMap(q=>q.categories))).sort();
       catList.innerHTML = '';
       const make = (name, active=false) => {
         const btn = document.createElement('button');
@@ -161,11 +145,8 @@
         btn.onclick = () => toggleCat(name);
         return btn;
       };
-      // "All" shortcut
-      const allBtn = make('All', state.cats.length===0);
-      allBtn.onclick = () => { state.cats = []; update(); };
-      catList.append(allBtn);
-      allCats.forEach(c => catList.append(make(c, state.cats.includes(c))));
+      catList.append(make('All', state.cats.length===0));
+      allCats.forEach(c=>catList.append(make(c, state.cats.includes(c))));
     }
 
     function toggleCat(c){
@@ -184,46 +165,27 @@
     }
 
     function renderCards(list){
-      if(list.length===0){ cards.innerHTML = `<div class="empty">No results. Try clearing filters.</div>`; return; }
+      if(list.length===0){ cards.innerHTML = `<div class="empty">No results.</div>`; return; }
       cards.innerHTML = list.map(q => `
-        <article class="card" id="${q.id}">
-          <div class="q">“${escapeHtml(q.text)}”</div>
-          <div class="meta">
-            <span>— <strong>${escapeHtml(q.author)}</strong></span>
-            <span>· ${escapeHtml(q.source)}</span>
-            ${q.url ? `<span>· <a href="${escapeAttr(q.url)}" target="_blank" rel="noopener">source</a></span>` : ''}
-          </div>
-          <div class="badges">${(q.categories||[]).map(c=>`<span class="badge">${escapeHtml(c)}</span>`).join('')} ${(q.tags||[]).map(t=>`<span class="badge">#${escapeHtml(t)}</span>`).join('')}</div>
+        <article class="card">
+          <div class="q">“${q.text}”</div>
+          <div class="meta">— <strong>${q.author}</strong> · ${q.source} ${q.url ? `· <a href="${q.url}" target="_blank">source</a>`:''}</div>
+          <div class="badges">${(q.categories||[]).map(c=>`<span class="badge">${c}</span>`).join('')} ${(q.tags||[]).map(t=>`<span class="badge">#${t}</span>`).join('')}</div>
         </article>
       `).join('');
     }
 
-    function updateUrl(){
-      const params = new URLSearchParams();
-      if(state.q) params.set('q', state.q);
-      if(state.cats.length) params.set('cat', state.cats.join(','));
-      const newUrl = location.pathname + (params.toString()?`?${params}`:'');
-      history.replaceState(null, '', newUrl);
-    }
-
     function update(){
-      const filtered = quotes.filter(matches).sort((a,b)=>{
-        const ad = (a.date||'').toString();
-        const bd = (b.date||'').toString();
-        return bd.localeCompare(ad); // newest first
-      });
+      const filtered = quotes.filter(matches);
       renderCats();
       renderCards(filtered);
-      count.textContent = `${filtered.length} ${filtered.length===1?'quote':'quotes'}`;
-      updateUrl();
+      count.textContent = `${filtered.length} quotes`;
     }
 
-    // Controls
-    searchInput.value = state.q;
     searchInput.addEventListener('input', e=>{ state.q = e.target.value; update(); });
     document.getElementById('clearFilters').onclick = ()=>{ state.q=''; state.cats=[]; searchInput.value=''; update(); };
     document.getElementById('copyLink').onclick = async ()=>{
-      try { await navigator.clipboard.writeText(location.href); showToast('Link copied'); } catch { showToast('Copy failed'); }
+      try { await navigator.clipboard.writeText(location.href); alert('Link copied'); } catch { alert('Copy failed'); }
     };
     document.getElementById('exportJson').onclick = ()=>{
       const blob = new Blob([JSON.stringify({quotes}, null, 2)], {type:'application/json'});
@@ -234,24 +196,6 @@
       URL.revokeObjectURL(a.href);
     };
 
-    // Keyboard quick open
-    window.addEventListener('keydown', (e)=>{
-      if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='k'){ e.preventDefault(); searchInput.focus(); }
-    });
-
-    function showToast(msg){
-      const t = document.createElement('div');
-      t.textContent = msg; t.style.position='fixed'; t.style.bottom='18px'; t.style.left='50%'; t.style.transform='translateX(-50%)';
-      t.style.background='var(--panel)'; t.style.border='1px solid var(--border)'; t.style.padding='10px 12px'; t.style.borderRadius='10px';
-      t.style.boxShadow='0 6px 30px rgba(0,0,0,.35)'; t.style.zIndex='99';
-      document.body.appendChild(t); setTimeout(()=>t.remove(), 1400);
-    }
-
-    function escapeHtml(s){ return String(s).replace(/[&<>"]g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c])); }
-    function escapeAttr(s){ return String(s).replace(/"/g,'&quot;'); }
-
-    // init
-    renderCats();
     update();
   </script>
 </body>
